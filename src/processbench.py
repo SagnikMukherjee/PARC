@@ -4,18 +4,19 @@ import os
 import sys
 import json
 import argparse
-import re
 from typing import List, Dict, Any, Optional
 from loguru import logger
 from tqdm import tqdm
 from dotenv import load_dotenv
 
 # ========== Adjust project_root to your local path if needed ==========
-project_root = ""
+project_root = "/home/sagnikm3/dag-llm-temp/dag-llm"
 sys.path.append(project_root)
 
 from utils.inference_engine import InferenceEngine, Hyperparameters, get_total_usage
 
+# ---- IMPORT THE HELPER FUNCTIONS YOU PROVIDED ----
+# For simplicity, I've pasted them inline below. If you have them in a separate module, import from there.
 from transformers import AutoTokenizer
 try:
     from vllm import LLM, SamplingParams
@@ -25,7 +26,7 @@ except ImportError:
     logger.warning("vLLM not installed; local usage will not work unless installed.")
 
 ############################################################
-# HELPER PROMPT FUNCTIONS
+# HELPER PROMPT FUNCTIONS (from your snippet)
 ############################################################
 
 STANDALONE_SYS_PROMPT = """Your task is to determine whether a given sentence contains any mathematical errors. 
@@ -70,85 +71,6 @@ Format your response as:
 Reasoning: [detailed analysis of the statement's validity]
 Verdict: [correct, logical_inconsistency]
 """
-
-############################################################
-# NEW PREMISE ANNOTATION PROMPTS
-############################################################
-
-def create_premise_prompt(
-        question: str, 
-        solution_so_far: str, 
-        step: str, 
-        tokenizer: AutoTokenizer = None, 
-        samples_fewshot: Optional[List[Dict[str, str]]] = None, 
-        is_gpt: bool = False
-    ) -> Any:
-    """Create a prompt for premise extraction."""
-    if (samples_fewshot is not None) and (len(samples_fewshot) > 0):
-        fewshot_template = "\n\nYou can refer to the following example for guidance:"
-        for i, sample in enumerate(samples_fewshot):
-            fewshot_template += f"\n\nExample {i+1}:\n\n"
-            fewshot_template += f"Question (Step 0):\n{sample['question']}\n\n"
-            fewshot_template += f"Solution so far:\n{sample['context']}\n\n"
-            fewshot_template += f"Next step to analyze:\n{sample['step']}\n\n"
-            fewshot_template += f"In this example, you need to generate:\n{sample['justification']}"
-    else:
-        fewshot_template = ""
-
-    user_message = f"""You are provided with a question, a partial solution, and the next step in the solution. Your task is to identify the steps that serve as premises for the given next step.
-A step qualifies as a premise if the next step directly relies on information from that step. Based on the identified premises, the correctness of the next step should be fully verifiable.
-
-Question (Step 0):
-{question}
-
-Solution so far:
-{solution_so_far}
-
-Next step to analyze:
-{step}
-
-For the step above, identify which previous steps (including Step 0 - the question) are premises and explain why each one is necessary. Remember:
-1. A step cannot be a premise to itself
-2. The question (Step 0) can be a premise if used directly
-
-Generate **ONLY** the premises and nothing else.
-Format your response with one premise per line as:
-Step X: [explanation of why this step is necessary for the current step]{fewshot_template}"""
-
-    if is_gpt:
-        messages = [
-            {"role": "system", "content": ""},
-            {"role": "user", "content": user_message}
-        ]
-        return messages
-    else:
-        messages = [
-            {"role": "system", "content": ""},
-            {"role": "user", "content": user_message}
-        ]
-        return tokenizer.apply_chat_template(messages, tokenize=False)
-
-def process_model_output_premises(output: str) -> List[int]:
-    """Process model output to extract premises."""
-    if output is None:
-        return []
-        
-    lines = output.strip().split('\n')
-    premises = []
-    
-    for line in lines:
-        if not line.strip():
-            continue
-            
-        match = re.search(r"Step\s+(\d+)", line)
-        if match:
-            try:
-                step_num = int(match.group(1))
-                premises.append(step_num)
-            except ValueError:
-                pass
-    
-    return premises
 
 def create_error_classification_prompt_gpt_standalone(question: str, step: str) -> List[Dict[str, str]]:
     """Create a prompt for GPT models that focuses on standalone correctness (mathematical error or correct)."""
@@ -205,9 +127,11 @@ class LocalInferenceEngine:
             raise RuntimeError("vLLM or transformers not installed, cannot use LocalInferenceEngine.")
 
         logger.info(f"Loading local model from {model_name} with vLLM.")
+        # For some models, you might need trust_remote_code=True, etc.
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.llm = LLM(model=model_name, tensor_parallel_size=tensor_parallel_size)
 
+        # We'll store usage stats ourselves if needed
         self.prompt_tokens_used = 0
         self.completion_tokens_used = 0
 
@@ -236,7 +160,7 @@ class LocalInferenceEngine:
 
         results = []
         for out in outputs:
-            if not out.outputs:
+            if not out.outputs:  # some error case
                 results.append("")
             else:
                 text = out.outputs[0].text
@@ -255,7 +179,11 @@ class LocalInferenceEngine:
         a chat-style format. The crucial piece is `add_generation_prompt=True`, so that the
         final user message is followed by something like: '\nAssistant:' 
         """
+        # If your tokenizer does *not* implement apply_chat_template, you can replicate
+        # the logic manually. If it does, we can do:
         if not hasattr(self.tokenizer, "apply_chat_template"):
+            # fallback to a naive manual approach
+            # (example: "[System]\n{content}\n\n[User]\n{content}\n\nAssistant:")
             prompt = ""
             for msg in messages:
                 role = msg["role"].lower()
@@ -265,9 +193,11 @@ class LocalInferenceEngine:
                     prompt += f"[User]\n{msg['content'].strip()}\n\n"
                 else:
                     prompt += f"[{role.capitalize()}]\n{msg['content'].strip()}\n\n"
+            # add a final "Assistant:" so model knows to produce an answer
             prompt += "Assistant:"
             return prompt
         else:
+            # Use HF's chat template if available
             return self.tokenizer.apply_chat_template(
                 messages,
                 tokenize=False,
@@ -286,23 +216,24 @@ def get_engine(model_name: str, use_local_vllm: bool, tensor_parallel_size: int 
     else:
         # Azure usage
         logger.info(f"Using Azure InferenceEngine for model {model_name}.")
+        # Adapt logic as needed for your environment:
         if model_name in ["o1-mini", "o1-preview"]:
             return InferenceEngine(
                 inference_strategy="azure_openai",
                 connection_details={
-                    "api_key": os.getenv("API_KEY"),
-                    "base_url": "https://api.openai.com/v1",
-                    "api_version": ""
+                    "api_key": os.getenv("AZURE_OPENAI_KEY_O1"),
+                    "base_url": "https://uiuc-convai-sweden.openai.azure.com/",
+                    "api_version": "2024-09-01-preview"
                 },
                 model_name=model_name
             )
         else:
             return InferenceEngine(
-                inference_strategy="openai",
+                inference_strategy="azure_openai",
                 connection_details={
-                    "api_key": os.getenv("API_KEY"),
-                    "base_url": "https://api.openai.com/v1",
-                    "api_version": ""
+                    "api_key": os.getenv("AZURE_OPENAI_KEY"),
+                    "base_url": "https://uiuc-convai.openai.azure.com/",
+                    "api_version": "2024-02-15-preview"
                 },
                 model_name=model_name
             )
@@ -323,194 +254,116 @@ def save_json_data(data: List[Dict[str, Any]], file_path: str):
     logger.info(f"Saved {len(data)} records to {file_path}")
 
 ############################################################
-# REVISED PREMISE ANNOTATION IMPLEMENTATION
+# PROMPTS FOR PREMISE ANNOTATION (unchanged from your snippet)
+############################################################
+
+def create_premise_prompt(problem: Dict[str, Any]) -> str:
+    question = problem.get("question", problem.get("problem", ""))
+    steps_joined = "\n".join(problem.get("steps", []))
+
+    json_template = '''{
+    "steps": [
+        {
+            "step_number": 0,
+            "original_step": "{question}",
+            "premises": [[0, "premise from problem statement"]],
+            "conclusion": "key information from the problem",
+            "reasoning": "organization of problem information"
+        },
+        {
+            "step_number": 1,
+            "original_step": "copy the exact step text from student's solution",
+            "premises": [
+                [0, "premise from problem"],
+                [1, "premise from step 1"]
+            ],
+            "conclusion": "result of this step",
+            "reasoning": "how premises combine to reach the conclusion"
+        }
+    ]
+}'''
+
+    prompt = f"""Given this math word problem and its solution steps, identify the key premises and their relationships.
+
+Problem: {question}
+
+Solution Steps:
+{steps_joined}
+
+Return your analysis in this exact JSON format:
+{json_template}
+
+Critical Rules for Premises:
+1. A step can NEVER use itself as a premise.
+2. Premises can only come from Step 0 (the problem statement) or previous steps.
+3. The number of steps in your output (excluding step 0) must match exactly the number of steps in the student's solution.
+4. Only produce valid JSON, with no extra text or formatting."""
+
+    return prompt
+
+def format_prompts_premise(problems: List[Dict[str, Any]]) -> List[List[Dict[str, str]]]:
+    messages_batch = []
+    for prob in problems:
+        system_msg = {
+            "role": "system",
+            "content": (
+                "You are an expert in mathematical reasoning. "
+                "Output only valid JSON describing premises, conclusion, and reasoning. "
+                "No extra text."
+            )
+        }
+        user_msg = {
+            "role": "user",
+            "content": create_premise_prompt(prob)
+        }
+        messages_batch.append([system_msg, user_msg])
+    return messages_batch
+
+############################################################
+# RUN PREMISE ANNOTATION
 ############################################################
 
 def run_premise_annotation(
     problems: List[Dict[str, Any]],
     engine: object,
     batch_size: int = 128
-) -> None:
-    """
-    Run premise annotation for all steps in all problems.
-    """
-    all_steps = []
-    
-    for prob_idx, prob in enumerate(problems):
-        question = prob.get("question", prob.get("problem", ""))
-        steps = prob.get("steps", [])
-        
-        # For each step in the problem (starting from step 1, since step 0 is the question)
-        for step_idx in range(1, len(steps)):
-            solution_so_far = "\n".join(steps[:step_idx])
-            current_step = steps[step_idx]
-            
-            all_steps.append({
-                "problem_idx": prob_idx,
-                "step_idx": step_idx,
-                "question": question,
-                "solution_so_far": solution_so_far,
-                "current_step": current_step
-            })
-    
-    logger.info(f"Total steps for premise annotation: {len(all_steps)}")
-    
-    # Initialize premise annotation data structure for all problems
-    for prob in problems:
-        # Create a structure that matches the expected format for evaluation
-        premise_steps = [
-            {
-                "step_number": 0,
-                "original_step": prob.get("question", prob.get("problem", "")),
-                "premises": [],
-                "conclusion": "key information from the problem",
-                "reasoning": "organization of problem information"
-            }
-        ]
-        
-        # Add an entry for each solution step
-        for step_idx, step_text in enumerate(prob.get("steps", []), 1):
-            premise_steps.append({
-                "step_number": step_idx,
-                "original_step": step_text,
-                "premises": [],  # Will be filled in by the batch processing
-                "conclusion": "",
-                "reasoning": ""
-            })
-        
-        prob["premise_annotation"] = {"steps": premise_steps}
-    
-    # Process in batches
-    num_batches = (len(all_steps) + batch_size - 1) // batch_size
-    
+) -> List[str]:
+    num_batches = (len(problems) + batch_size - 1) // batch_size
+    all_responses = []
+
     for b in range(num_batches):
-        start_idx = b * batch_size
-        end_idx = min((b + 1) * batch_size, len(all_steps))
-        batch = all_steps[start_idx:end_idx]
-        
+        batch = problems[b*batch_size : (b+1)*batch_size]
+        prompts = format_prompts_premise(batch)
+        hyperparams = Hyperparameters(max_tokens=4096, temperature=0.0)
+
         logger.info(f"[Premise] Processing batch {b+1}/{num_batches}, size={len(batch)}")
-        
-        # Create prompts for all steps in this batch
-        prompts = []
-        for item in batch:
-            # Create the prompt using the function from the reference script
-            prompt = create_premise_prompt(
-                question=item["question"],
-                solution_so_far=item["solution_so_far"],
-                step=item["current_step"],
-                is_gpt=True
-            )
-            prompts.append(prompt)
-        
-        # Run inference in batch
-        hyperparams = Hyperparameters(max_tokens=2048, temperature=0.0)
         try:
-            batch_responses = engine.parallel_messages_inference(prompts, hyperparams)
+            batch_resps = engine.parallel_messages_inference(prompts, hyperparams)
+            all_responses.extend(batch_resps)
         except Exception as e:
             logger.error(f"Error in premise batch {b+1}: {e}")
-            batch_responses = [None] * len(batch)
-        
-        # Process each response and update the premise_annotation in the problems
-        for item, response in zip(batch, batch_responses):
-            prob_idx = item["problem_idx"]
-            step_idx = item["step_idx"]
-            
-            if response is not None:
-                # Process the model's output to extract premises
-                premises = process_model_output_premises(response)
-                
-                # Make sure the premises are valid (no self-reference, only previous steps)
-                premises = [p for p in premises if p < step_idx]
-                
-                # Format the premises in the expected format: [[step_number, reason]]
-                formatted_premises = [[p, f"Premise from step {p}"] for p in premises]
-                
-                # Update the premise_annotation for this step
-                problems[prob_idx]["premise_annotation"]["steps"][step_idx]["premises"] = formatted_premises
-        
-        # Log usage statistics
+            all_responses.extend([None]*len(batch))
+
         usage_stats = get_total_usage()
         logger.info(
-            f"Usage so far: Prompt={usage_stats['total_prompt_tokens']} "
-            f"Completion={usage_stats['total_completion_tokens']} "
-            f"Cost=${usage_stats['total_cost']:.4f}"
+            f"Usage so far: Prompt={usage_stats['total_prompt_tokens']} Completion={usage_stats['total_completion_tokens']}"
+            f" Cost=${usage_stats['total_cost']:.4f}"
         )
 
-############################################################
-# HELPER FUNCTIONS FOR PREMISE-BASED ERROR ANNOTATION
-############################################################
+    return all_responses
 
-def extract_steps_with_premises(problems: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """
-    Extract steps with their specific premises based on premise annotation.
-    This follows the approach from the reference script but adapted to our data structure.
-    """
-    all_steps_with_premises = []
-    
-    for p_idx, prob in enumerate(problems):
-        question = prob.get("question", prob.get("problem", ""))
-        steps = prob.get("steps", [])
-        
-        # Get premise annotations if available
-        premise_annotations = prob.get("premise_annotation", {}).get("steps", [])
-        
-        # Start from step 1 (skip the question, which is step 0)
-        for s_idx, step_text in enumerate(steps):
-            step_info = {
-                "problem_idx": p_idx,
-                "step_idx": s_idx,
-                "question": question,
-                "step_text": step_text,
-                "premises": [],
-                "formatted_premises": [],
-                "premise_reasons": []
-            }
-            
-            # Find premise annotation for this step
-            premise_info = None
-            if s_idx < len(premise_annotations):
-                premise_info = premise_annotations[s_idx]
-            
-            # If we have premise info, extract the specific premises
-            if premise_info and "premises" in premise_info:
-                premises = premise_info["premises"]
-                for premise in premises:
-                    if len(premise) >= 2:
-                        premise_step_num, reason = premise[0], premise[1]
-                        
-                        # Skip if premise is the step itself or step 0 (the question)
-                        if premise_step_num == s_idx:
-                            continue
-                            
-                        # For step 0 (question), use the question text
-                        if premise_step_num == 0:
-                            original_step_text = question
-                        else:
-                            # For other steps, find the original step text
-                            if premise_step_num < len(steps):
-                                original_step_text = steps[premise_step_num - 1]
-                            else:
-                                continue  # Invalid premise step number
-                        
-                        step_info["premises"].append([premise_step_num, original_step_text])
-                        step_info["premise_reasons"].append(reason)
-            
-            # Format premises for the prompt
-            if step_info["premises"]:
-                step_info["formatted_premises"] = [f"Premise {i} - {p[1]}" for i, p in enumerate(step_info["premises"])]
-            else:
-                # If no specific premises were identified, fall back to using previous steps
-                if s_idx > 0:
-                    # Just use all previous steps as premises
-                    step_info["formatted_premises"] = [f"Premise {i} - {steps[i]}" for i in range(s_idx)]
-                    step_info["premise_reasons"] = ["Previous step"] * s_idx
-            
-            all_steps_with_premises.append(step_info)
-    
-    return all_steps_with_premises
+def integrate_premises(problems: List[Dict[str, Any]], premise_texts: List[str]) -> None:
+    for prob, annotation_str in zip(problems, premise_texts):
+        if annotation_str is None:
+            continue
+        try:
+            annotation_json = json.loads(annotation_str)
+            prob["premise_annotation"] = annotation_json
+        except json.JSONDecodeError:
+            logger.warning("Could not parse premise annotation as JSON. Skipping.")
 
 ############################################################
-# RUN ERROR ANNOTATION (revised to use premise information)
+# RUN ERROR ANNOTATION (updated to use your GPT prompt helpers)
 ############################################################
 
 def run_error_annotation(
@@ -523,12 +376,26 @@ def run_error_annotation(
       1) standalone check (correct or mathematical_error)
       2) contextual check (correct or logical_inconsistency)
 
-    Uses specifically identified premises for contextual checks.
     Returns a list of lists, one sublist per problem, each sublist is step-level results.
     """
-    # Extract steps with their premises
-    all_steps = extract_steps_with_premises(problems)
-    
+    # Flatten all steps
+    all_steps = []
+    for p_idx, prob in enumerate(problems):
+        question = prob.get("question", prob.get("problem", ""))
+        steps = prob.get("steps", [])
+        for s_idx, step_text in enumerate(steps):
+            # We'll supply the text of previous steps as "premises" in a single block
+            premises_text = "\n".join(
+                f"- {st}" for st in steps[:s_idx]
+            ) if s_idx > 0 else ""
+            all_steps.append({
+                "problem_idx": p_idx,
+                "step_idx": s_idx,
+                "question": question,
+                "premises_text": premises_text,
+                "step_text": step_text
+            })
+
     results_for_all = [None]*len(all_steps)
     num_batches = (len(all_steps) + batch_size - 1) // batch_size
     logger.info(f"Total steps for error annotation: {len(all_steps)}")
@@ -542,21 +409,16 @@ def run_error_annotation(
         standalone_messages = []
         contextual_messages = []
         for item in batch_data:
-            # Create standalone prompt (mathematical correctness)
+            # We do not strictly need 'solution' argument; pass item["question"] if needed
             st_msgs = create_error_classification_prompt_gpt_standalone(
                 question=item["question"],
                 step=item["step_text"]
             )
-            
-            # Create contextual prompt (logical consistency with premises)
-            premises_text = "\n".join(item["formatted_premises"]) if item["formatted_premises"] else ""
-            
             ct_msgs = create_error_classification_prompt_gpt(
                 question=item["question"],
-                premises_text=premises_text,
+                premises_text=item["premises_text"],
                 step=item["step_text"]
             )
-            
             standalone_messages.append(st_msgs)
             contextual_messages.append(ct_msgs)
 
@@ -665,13 +527,14 @@ def main():
     engine = get_engine(args.model_name, args.use_local_vllm, tensor_parallel_size=args.tensor_parallel_size)
 
     # 3) Premise annotation
-    run_premise_annotation(problems, engine, batch_size=args.batch_size)
+    premise_responses = run_premise_annotation(problems, engine, batch_size=args.batch_size)
+    integrate_premises(problems, premise_responses)
 
-    # 4) Error annotation (unchanged)
+    # 4) Error annotation
     error_data = run_error_annotation(problems, engine, batch_size=args.batch_size)
     integrate_error_annotation(problems, error_data)
 
-    # 5) Final usage stats
+    # 5) Final usage stats (only meaningful if using Azure)
     usage_stats = get_total_usage()
     logger.info("=== Final Usage Stats ===")
     logger.info(f"Prompt tokens: {usage_stats['total_prompt_tokens']}, "
