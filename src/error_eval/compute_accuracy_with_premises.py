@@ -10,7 +10,7 @@ def load_json_data(file_path):
 def analyze_step_accuracy(data):
     correct, error, acc = [], [], []
     
-    for problem_id,problem in enumerate(data[:50]):
+    for problem_id,problem in enumerate(data):
         if problem_id == 13:
             continue
         total_steps = 0
@@ -81,7 +81,7 @@ def analyze_step_accuracy(data):
     # }
 
 def main():
-    dir_path = '/home/sagnikm3/dag-llm/eval/error_eval_results/test/'
+    dir_path = '/home/sagnikm3/PARC/outputs'
 
     for filename in os.listdir(dir_path):
         file_path = os.path.join(dir_path, filename)

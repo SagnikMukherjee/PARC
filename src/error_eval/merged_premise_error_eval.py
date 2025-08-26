@@ -74,7 +74,7 @@ Step X: [explanation of why this step is necessary for the current step]{fewshot
             {"role": "system", "content": ""},
             {"role": "user", "content": user_message}
         ]
-        return tokenizer.apply_chat_template(messages, tokenize=False)
+        return tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
 
 def process_model_output_premises(output: str) -> List[str]:
     """Process model output to extract premises."""

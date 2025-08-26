@@ -3,7 +3,7 @@ import json
 
 import os
 
-directory_path = "/shared/storage-01/users/achinta3/repos/dag-llm/eval/premise_fewshot_results"
+directory_path = "/home/sagnikm3/PARC/outputs"
 
 for filename in os.listdir(directory_path):
     file_path = os.path.join(directory_path, filename)
