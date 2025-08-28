@@ -94,18 +94,12 @@ def extract_steps_and_premises(problem_data: Dict[str, Any], recursive_premises:
                         break
                         
                 if original_step:
-                    # Get premises of this premise recursively if enabled
-                    sub_premises = get_step_premises(premise_step_number, visited.copy()) if recursive_premises else []
-                    # Sort sub_premises by step number
-                    sub_premises.sort(key=lambda x: x['step_number'])
-                    # Remove "Premise X - " if it exists at the start of original_step
                     if original_step.startswith("Premise "):
                         original_step = original_step.split(" - ", 1)[1] if " - " in original_step else original_step
                     premises.append({
                         'step_number': premise_step_number,
                         'step_text': original_step,
-                        'reason': reason,
-                        'sub_premises': sub_premises
+                        'reason': reason
                     })
                 else:
                     # If we can't find original step, use reason as both step and info
@@ -138,73 +132,37 @@ def extract_steps_and_premises(problem_data: Dict[str, Any], recursive_premises:
                     'premises': [],
                     'premise_reasons': []
                 }
+
+                # Original non-recursive behavior
+                for premise in step_data.get('premises', []):
+                    if len(premise) >= 2:  # Premise should have [step_number, reason]
+                        step_number, reason = premise[0], premise[1]
+                        if step_number == 0:
+                            continue
+                        # Find the original step text for this premise
+                        original_step = None
+                        for s in steps:
+                            if s.get('step_number') == step_number:
+                                original_step = s.get('original_step', '')
+                                break
+                        if original_step:
+                            # Remove "Premise X - " if it exists at the start of original_step
+                            if original_step.startswith("Premise "):
+                                original_step = original_step.split(" - ", 1)[1] if " - " in original_step else original_step
+                            step_info['premises'].append([step_number, original_step])
+                            step_info['premise_reasons'].append(reason)
+                        else:
+                            # If we can't find original step, use reason as both step and info
+                            # Remove "Premise X - " if it exists at the start of reason
+                            if reason.startswith("Premise "):
+                                reason = reason.split(" - ", 1)[1] if " - " in reason else reason
+                            step_info['premises'].append([-1, reason])  # Use -1 for non-step premises
+                            step_info['premise_reasons'].append(reason)
                 
-                if recursive_premises:
-                    # Get premises recursively with hierarchy
-                    step_info['premises'] = get_step_premises(step_number, set())
-                    
-                    # Format premises for the prompt
-                    formatted_premises = []
-                    premise_reasons = []
-                    seen_premises = set()  # Track seen premises to avoid duplicates
-                    all_premises = []  # Collect all premises first
-                    
-                    def collect_premises(premises_list: List[Dict[str, Any]], depth: int = 0):
-                        for p in premises_list:
-                            if p['step_text'] not in seen_premises:
-                                seen_premises.add(p['step_text'])
-                                all_premises.append((p['step_number'], depth, p))
-                            collect_premises(p['sub_premises'], depth + 1)
-                    
-                    # First collect all premises
-                    collect_premises(step_info['premises'])
-                    
-                    # Sort all premises by step number
-                    all_premises.sort(key=lambda x: x[0])  # Sort by step_number
-                    
-                    # Now format them in order
-                    for step_num, depth, p in all_premises:
-                        prefix = "  " * depth + f"Premise {len(formatted_premises)} - "
-                        # Remove "Premise X - " if it exists at the start of step_text
-                        step_text = p['step_text']
-                        if step_text.startswith("Premise "):
-                            step_text = step_text.split(" - ", 1)[1] if " - " in step_text else step_text
-                        formatted_premises.append(prefix + step_text)
-                        premise_reasons.append(p['reason'])
-                    
-                    step_info['formatted_premises'] = formatted_premises
-                    step_info['premise_reasons'] = premise_reasons
-                else:
-                    # Original non-recursive behavior
-                    for premise in step_data.get('premises', []):
-                        if len(premise) >= 2:  # Premise should have [step_number, reason]
-                            step_number, reason = premise[0], premise[1]
-                            if step_number == 0:
-                                continue
-                            # Find the original step text for this premise
-                            original_step = None
-                            for s in steps:
-                                if s.get('step_number') == step_number:
-                                    original_step = s.get('original_step', '')
-                                    break
-                            if original_step:
-                                # Remove "Premise X - " if it exists at the start of original_step
-                                if original_step.startswith("Premise "):
-                                    original_step = original_step.split(" - ", 1)[1] if " - " in original_step else original_step
-                                step_info['premises'].append([step_number, original_step])
-                                step_info['premise_reasons'].append(reason)
-                            else:
-                                # If we can't find original step, use reason as both step and info
-                                # Remove "Premise X - " if it exists at the start of reason
-                                if reason.startswith("Premise "):
-                                    reason = reason.split(" - ", 1)[1] if " - " in reason else reason
-                                step_info['premises'].append([-1, reason])  # Use -1 for non-step premises
-                                step_info['premise_reasons'].append(reason)
-                    
-                    # Sort premises by step number
-                    step_info['premises'].sort(key=lambda x: x[0])
-                    # Extract just the text after sorting
-                    step_info['formatted_premises'] = [p[1] for p in step_info['premises']]
+                # Sort premises by step number
+                step_info['premises'].sort(key=lambda x: x[0])
+                # Extract just the text after sorting
+                step_info['formatted_premises'] = [p[1] for p in step_info['premises']]
                 
                 steps_with_premises.append(step_info)
                 
