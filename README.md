@@ -18,7 +18,7 @@ For OpenAI models, we run inference with AzureOpenAI. In that case set the follo
 ### Premise Mapping
 
 ```bash
-
+cd src/premise_eval
 export MODEL_PATH="meta-llama/Llama-3.1-8B-Instruct"
 
 
@@ -34,6 +34,7 @@ python merged_premise_error_eval.py \
 
 ### Baseline error evaluation
 ```bash
+cd src/baseline
 export MODEL_PATH="meta-llama/Llama-3.1-8B-Instruct"
 
 # Input and output files
@@ -52,6 +53,7 @@ python "step_error_eval.py" \
 ### Error Eval with Premises
 
 ```bash
+cd src/error_eval
 export MODEL_PATH="meta-llama/Llama-3.1-8B-Instruct"
 
 
