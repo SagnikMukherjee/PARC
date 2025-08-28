@@ -4,6 +4,19 @@
 
 Chain-of-Thought (CoT) prompting enhances mathematical reasoning in large language models (LLMs) by enabling detailed step-by-step solutions. However, due to the verbosity of LLMs, the resulting reasoning chains can be long, making it harder to verify the reasoning steps and trace issues resulting from dependencies between the steps that may be farther away in the sequence of steps. Importantly, mathematical reasoning allows each step to be derived from a small set of premises, which are a subset of the preceding steps in the reasoning chain. In this paper, we present a framework that identifies the premises for each step, to improve the evaluation of reasoning. We restructure conventional linear reasoning chains into Premise Augmented Reasoning Chains (PARC) by introducing premise links, resulting in a directed acyclic graph where the nodes are the steps and the edges are the premise links. Through experiments with a PARC-based dataset that we built, namely PERL (Premises and ERrors identification in LLMs), we demonstrate that LLMs can reliably identify premises within complex reasoning chains. In particular, even open-source LLMs achieve 90% recall in premise identification. We also show that PARC helps to identify errors in reasoning chains more reliably. The accuracy of error identification improves by 6% to 16% absolute when step-by-step verification is carried out in PARC under the premises. Our findings highlight the utility of premise-centric representations in addressing complex problem-solving tasks and open new avenues for improving the reliability of LLM-based reasoning evaluations.
 
+## Dataset Format
+
+Each entry in the dataset (see the folder datasets) follows this schema:
+
+- **question**: The math word problem posed to the model.  
+- **ground_truth_solution**: Step-by-step human-verified solution.  
+- **ground_truth_answer**: Final numeric/string answer from the ground truth solution.  
+- **model_answer**: The model’s predicted final answer.  
+- **steps**: The sequence of reasoning steps produced by the model.  
+- **is_correct**: Boolean indicating whether the model’s final answer matches the ground truth.  
+- **premise_annotation**: Mapping of each model step to its underlying premises.  
+- **error_annotation**: Labeled errors in the model’s reasoning, including error types and descriptions at the step level.  
+
 
 ## 🔧 Installation
 ```bash
