@@ -132,7 +132,6 @@ python merged_premise_error_eval.py \
 
 For questions or support, please contact:
 - Sagnik Mukherjee: sagnikm3@illinois.edu
-- Abhinav Chinta: achinta3@illinois.edu
 
 ## 📜 License
 
