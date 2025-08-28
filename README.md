@@ -13,6 +13,7 @@ Chain-of-Thought (CoT) prompting enhances mathematical reasoning in large langua
 
 ## 🔧 Installation
 
+## Run Evaluations
 ### Premise Mapping
 
 ```bash
