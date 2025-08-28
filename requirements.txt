@@ -1,0 +1,3 @@
+vllm
+transformers
+openai
