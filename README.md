@@ -14,6 +14,7 @@ pip install -r requirements.txt
 ```
 
 ## Run Evaluations
+For OpenAI models, we run inference with AzureOpenAI. In that case set the following environment variables - AZURE_ENDPOINT and AZURE_OPENAI_KEY. 
 ### Premise Mapping
 
 ```bash
