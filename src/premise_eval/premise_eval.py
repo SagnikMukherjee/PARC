@@ -104,7 +104,7 @@ def run_gpt_inference(messages: List[Dict[str, str]], model_name: str) -> str:
     client = AzureOpenAI(
         api_key=os.getenv("AZURE_OPENAI_KEY"),
         api_version="2023-12-01-preview",
-        azure_endpoint="https://uiuc-convai.openai.azure.com/"
+        azure_endpoint=os.getenv("AZURE_ENDPOINT")
     )
     
     deployment_name = model_name

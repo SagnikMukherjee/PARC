@@ -13,150 +13,54 @@ Chain-of-Thought (CoT) prompting enhances mathematical reasoning in large langua
 
 ## 🔧 Installation
 
-### Prerequisites
+### Premise Mapping
 
 ```bash
-# Create a virtual environment with uv
-uv venv parc_env
-source parc_env/bin/activate  # On Windows: parc_env\Scripts\activate
+MODEL_PATH="meta-llama/Llama-3.1-8B-Instruct"
 
-# Install required packages
-uv pip install torch transformers loguru tqdm python-dotenv
+
+INPUT_FILE="<path to PARC folder>/datasets/gsm8k/gsm8k_negatives.json"
+OUTPUT_FILE="<path to PARC folder>/outputs/gsm8k_negatives_llama8b.json"
+
+python merged_premise_error_eval.py \
+    --input-file "$INPUT_FILE" \
+    --output-file "$OUTPUT_FILE" \
+    --model-path "$MODEL_PATH" \
+    --tensor-parallel-size 4
 ```
 
-### For Local vLLM Usage (Optional)
+### Baseline error evaluation
 ```bash
-uv pip install vllm
+MODEL_PATH="meta-llama/Llama-3.1-8B-Instruct"
+
+# Input and output files
+
+INPUT_FILE="<path to PARC folder>/datasets/gsm8k/gsm8k_negatives.json"
+OUTPUT_FILE="<path to PARC folder>/outputs/gsm8k_negatives_llama8b.json"
+
+# Run the error classification script
+python "step_error_eval.py" \
+    --input-file "$INPUT_FILE" \
+    --output-file "$OUTPUT_FILE" \
+    --model-path "$MODEL_PATH" \
+    --tensor-parallel-size 4
 ```
 
-### For Azure/OpenAI Usage
+### Error Eval with Premises
+
 ```bash
-uv pip install openai
+MODEL_PATH="meta-llama/Llama-3.1-8B-Instruct"
+
+
+INPUT_FILE="<path to PARC folder>/datasets/gsm8k/gsm8k_negatives.json"
+OUTPUT_FILE="<path to PARC folder>/outputs/gsm8k_negatives_llama8b.json"
+
+python merged_premise_error_eval.py \
+    --input-file "$INPUT_FILE" \
+    --output-file "$OUTPUT_FILE" \
+    --model-path "$MODEL_PATH" \
+    --tensor-parallel-size 4
 ```
-
-## 🚀 Quick Start
-
-### 1. Environment Setup
-
-Create a `.env` file in the project root:
-```bash
-API_KEY=your_openai_or_azure_api_key_here
-```
-
-### 2. Prepare Your Data
-
-Your input JSON file should contain mathematical reasoning problems in the following format:
-
-```json
-[
-  {
-    "question": "Solve for x: 2x + 5 = 15",
-    "steps": [
-      "Subtract 5 from both sides: 2x + 5 - 5 = 15 - 5",
-      "Simplify: 2x = 10", 
-      "Divide both sides by 2: x = 5"
-    ]
-  }
-]
-```
-
-### 3. Run ProcessBench Component
-
-This script runs the ProcessBench component for premise identification and error annotation on mathematical reasoning problems.
-
-#### Using OpenAI/Azure Models:
-```bash
-python src/processbench.py \
-  --input-file data/problems.json \
-  --output-file results/annotated_problems.json \
-  --model-name gpt-4o \
-  --batch-size 32
-```
-
-#### Using Local vLLM Models:
-```bash
-python src/processbench.py \
-  --input-file data/problems.json \
-  --output-file results/annotated_problems.json \
-  --model-name /path/to/your/local/model \
-  --use-local-vllm \
-  --tensor-parallel-size 4 \
-  --batch-size 16
-```
-
-### 4. Monitor Progress
-
-The ProcessBench script provides detailed logging including:
-- Progress bars for batch processing
-- Token usage statistics (for API-based models)
-- Error handling for failed inference calls
-- Final cost estimates for API usage
-
-
-## 📋 ProcessBench Command Line Arguments
-
-| Argument | Type | Required | Description |
-|----------|------|----------|-------------|
-| `--input-file` | str | ✅ | Path to the input JSON file containing problems |
-| `--output-file` | str | ✅ | Path to save the annotated results |
-| `--model-name` | str | ✅ | Model name (e.g., 'gpt-4o') or local model path |
-| `--use-local-vllm` | flag | ❌ | Use local vLLM instead of Azure/OpenAI |
-| `--batch-size` | int | ❌ | Batch size for parallel inference (default: 128) |
-| `--tensor-parallel-size` | int | ❌ | Number of GPUs for tensor parallelism (default: 4) |
-
-## 📊 ProcessBench Output Format
-
-The ProcessBench script generates annotated data with the following structure:
-
-```json
-{
-  "question": "Original problem statement",
-  "steps": ["List of solution steps"],
-  "premise_annotation": {
-    "steps": [
-      {
-        "step_number": 1,
-        "original_step": "Step text",
-        "premises": [[0, "Question premise"], [1, "Previous step"]],
-        "conclusion": "What this step concludes",
-        "reasoning": "How premises lead to conclusion"
-      }
-    ]
-  },
-  "error_annotation": {
-    "step_annotations": [
-      {
-        "step_index": 1,
-        "standalone_verdict": "correct",
-        "contextual_verdict": "correct",
-        "standalone_explanation": "Mathematical analysis",
-        "contextual_explanation": "Logical consistency analysis"
-      }
-    ]
-  },
-  "predicted_error_step_indices": [2, 4]
-}
-```
-
-## 🔍 Error Types
-
-The framework identifies three types of errors:
-
-1. **Mathematical Error**: Incorrect calculations or formula applications
-2. **Logical Inconsistency**: Steps that violate logical principles or make unjustified conclusions  
-3. **Accumulation Error**: Steps that are locally correct but built upon erroneous premises
-
-## 📈 Performance
-
-Our experiments show that:
-- LLMs achieve **90%+ recall** in premise identification
-- Error identification accuracy improves by **6-16%** absolute when using PARC
-- The framework works effectively across multiple model scales and types
-
-## 🤝 Contributing
-
-We welcome contributions! Please feel free to submit issues, feature requests, or pull requests.
-
 
 ## 📄 Citation
 
