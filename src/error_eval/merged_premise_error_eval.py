@@ -233,7 +233,7 @@ def process_problems_in_batches(
 
 
             # Process errors for all steps in parallel
-            steps_with_premises = extract_steps_and_premises(problem, args.recursive_premises)
+            steps_with_premises = extract_steps_and_premises(problem)
 
             standalone_messages = []
             contextual_messages = []
@@ -335,8 +335,6 @@ def main():
     parser.add_argument('--fewshot-num', type=int, default=0, help='Number of few-shot examples')
     parser.add_argument('--tensor-parallel-size', type=int, default=1,
                       help='Number of GPUs for tensor parallelism')
-    parser.add_argument('--recursive-premises', action='store_true', default=False,
-                      help='Enable recursive premise gathering')
     parser.add_argument('--use-azure', action='store_true', default=False,
                       help='Use Azure OpenAI instead of model path')
     parser.add_argument('--batch-size', type=int, default=1,
