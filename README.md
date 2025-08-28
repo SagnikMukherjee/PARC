@@ -12,6 +12,12 @@ Chain-of-Thought (CoT) prompting enhances mathematical reasoning in large langua
 - **PERL Dataset**: A comprehensive dataset of reasoning chains annotated with premises and error types
 
 ## 🔧 Installation
+```bash
+git clone https://github.com/SagnikMukherjee/PARC.git
+cd PARC
+conda create -n parc
+pip install -r requirements.txt
+```
 
 ## Run Evaluations
 ### Premise Mapping
