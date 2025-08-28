@@ -118,7 +118,7 @@ def get_inference_engine(model_name: str) -> InferenceEngine:
         inference_strategy="azure_openai",
         connection_details={
             "api_key": os.getenv("AZURE_OPENAI_KEY"),
-            "base_url": "https://uiuc-convai.openai.azure.com/",
+            "base_url": os.getenv("AZURE_ENDPOINT"),
             "api_version": "2024-02-15-preview"
         },
         model_name=model_name
