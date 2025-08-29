@@ -2,6 +2,7 @@ import json
 from collections import defaultdict
 import numpy as np
 import os
+import argparse
 
 def load_json_data(file_path):
     with open(file_path, 'r') as f:
@@ -81,10 +82,14 @@ def analyze_step_accuracy(data):
     # }
 
 def main():
-    dir_path = '/home/sagnikm3/PARC/outputs'
+    # dir_path = '/home/sagnikm3/PARC/outputs'
+    parser = argparse.ArgumentParser(description='Evaluate premises and errors in solution steps')
+    parser.add_argument('--input-folder', type=str, required=True,
+                      help='Path to the input JSON file')
+    args = parser.parse_args()
 
-    for filename in os.listdir(dir_path):
-        file_path = os.path.join(dir_path, filename)
+    for filename in os.listdir(args.input_folder):
+        file_path = os.path.join(args.input_folder, filename)
         data = load_json_data(file_path)
         print(filename)
         analyze_step_accuracy(data)

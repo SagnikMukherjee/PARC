@@ -80,6 +80,7 @@ python merged_premise_error_eval.py \
 ```
 
 ### Baseline error evaluation
+Inference
 ```bash
 cd src/baseline
 export MODEL_PATH="meta-llama/Llama-3.1-8B-Instruct"
@@ -96,9 +97,13 @@ python "step_error_eval.py" \
     --model-path "$MODEL_PATH" \
     --tensor-parallel-size 4
 ```
-
+Evaluation
+```bash
+python compute_accuracy.py --input-folder < path to PARC folder >/outputs 
+```
 ### Error Eval with Premises
 
+Inference 
 ```bash
 cd src/error_eval
 export MODEL_PATH="meta-llama/Llama-3.1-8B-Instruct"
@@ -113,7 +118,10 @@ python merged_premise_error_eval.py \
     --model-path "$MODEL_PATH" \
     --tensor-parallel-size 4
 ```
-
+Evaluation
+```bash
+python compute_accuracy_with_premises.py --input-folder < path to PARC folder >/outputs 
+```
 ## 📄 Citation
 
 ```bibtex
