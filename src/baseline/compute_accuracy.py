@@ -1,12 +1,16 @@
 ## averaging for each qs
 import json
 
-import os
+import os, argparse
 
-directory_path = "/home/sagnikm3/PARC/outputs"
 
-for filename in os.listdir(directory_path):
-    file_path = os.path.join(directory_path, filename)
+parser = argparse.ArgumentParser(description='Evaluate premises and errors in solution steps')
+parser.add_argument('--input-folder', type=str, required=True,
+                    help='Path to the input JSON file')
+args = parser.parse_args()
+
+for filename in os.listdir(args.input_folder):
+    file_path = os.path.join(args.input_folder, filename)
     if os.path.isfile(file_path):
         PATH = file_path
 
