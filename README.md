@@ -22,7 +22,7 @@ MODEL_PATH="meta-llama/Llama-3.1-8B-Instruct"
 INPUT_FILE="<path to PARC folder>/datasets/gsm8k/gsm8k_negatives.json"
 OUTPUT_FILE="<path to PARC folder>/outputs/gsm8k_negatives_llama8b.json"
 
-python merged_premise_error_eval.py \
+python premise_eval.py \
     --input-file "$INPUT_FILE" \
     --output-file "$OUTPUT_FILE" \
     --model-path "$MODEL_PATH" \
