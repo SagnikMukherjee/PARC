@@ -154,7 +154,7 @@ def main():
             max_tokens=512,
             stop=None
         )
-        llm = LLM(model=args.model_path, download_dir="/shared/storage-01/huggingface/models/", tensor_parallel_size=args.tensor_parallel_size)
+        llm = LLM(model=args.model_path, tensor_parallel_size=args.tensor_parallel_size)
     else:
         tokenizer = None
         llm = None
