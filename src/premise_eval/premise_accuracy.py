@@ -1,7 +1,12 @@
 import json
 # from sklearn import metrics
 # from typing import List, Dict
-import os
+import os, argparse
+
+parser = argparse.ArgumentParser(description='Evaluate premises and errors in solution steps')
+parser.add_argument('--input-folder', type=str, required=True,
+                    help='Path to the input JSON file')
+args = parser.parse_args()
 
 def compute_precision_recall(ground_truth, prediction):
     # Convert to sets for easier computation
@@ -21,7 +26,7 @@ def compute_precision_recall(ground_truth, prediction):
     return precision, recall
 
 
-dir_path = '/home/sagnikm3/PARC/outputs'
+dir_path = args.input_folder
 
 for filename in os.listdir(dir_path):
     file_path = os.path.join(dir_path, filename)
