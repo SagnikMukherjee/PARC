@@ -76,13 +76,9 @@ def analyze_step_accuracy(data):
     print(f"\nAccuracy for correct steps: {np.mean(np.array(correct)):.2%}", len(correct))
     print(f"Accuracy for error steps: {np.mean(np.array(error)):.2%}", len(error))
     print(f"Accuracy for accumulation error steps: {np.mean(np.array(acc)):.2%}", len(acc))
-    # return {
-    #     'correct_accuracy': correct_steps/total_steps,
-    #     'error_accuracy': correct_error_steps/total_error_steps
-    # }
+
 
 def main():
-    # dir_path = '/home/sagnikm3/PARC/outputs'
     parser = argparse.ArgumentParser(description='Evaluate premises and errors in solution steps')
     parser.add_argument('--input-folder', type=str, required=True,
                       help='Path to the input JSON file')
@@ -94,9 +90,6 @@ def main():
         print(filename)
         analyze_step_accuracy(data)
 
-    # file_path = '/home/sagnikm3/dag-llm/eval/error_eval_with_premises/gsm8k_positives_perturbed_gpt4o.json'
-    # data = load_json_data(file_path)
-    # analyze_step_accuracy(data)
 
 if __name__ == "__main__":
     main()

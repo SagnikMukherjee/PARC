@@ -45,4 +45,4 @@ for filename in os.listdir(args.input_folder):
                     errors[error] = []
                 errors[error].append(accuracy/total)
     for error in errors:
-        print(error, sum(errors[error])/len(errors[error]), len(errors[error]))          # print(error, accuracy/total,accuracy, total)
+        print(error, sum(errors[error])/len(errors[error]), len(errors[error]))
