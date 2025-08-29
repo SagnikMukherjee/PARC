@@ -63,7 +63,7 @@ pip install -r requirements.txt
 ## Run Evaluations
 For OpenAI models, we run inference with AzureOpenAI. In that case set the following environment variables - AZURE_ENDPOINT and AZURE_OPENAI_KEY. 
 ### Premise Mapping
-
+Inference
 ```bash
 cd src/premise_eval
 export MODEL_PATH="meta-llama/Llama-3.1-8B-Instruct"
@@ -78,7 +78,10 @@ python premise_eval.py \
     --model-path "$MODEL_PATH" \
     --tensor-parallel-size 4
 ```
-
+Evaluation
+```bash
+python premise_accuracy.py --input-folder < path to PARC folder >/outputs 
+```
 ### Baseline error evaluation
 Inference
 ```bash
