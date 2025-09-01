@@ -119,7 +119,7 @@ def get_inference_engine(model_name: str) -> InferenceEngine:
         connection_details={
             "api_key": os.getenv("AZURE_OPENAI_KEY"),
             "base_url": os.getenv("AZURE_ENDPOINT"),
-            "api_version": "2024-02-15-preview"
+            "api_version": "2024-12-01-preview"
         },
         model_name=model_name
     )
@@ -196,8 +196,6 @@ def process_problems_in_batches(
             # Process premises for all steps in parallel
             premise_messages = []
             for step_idx, step in enumerate(steps):
-                if step_idx == 0:  # Skip question
-                    continue
                     
                 solution_so_far = '\n'.join(steps[:step_idx])
                 messages = create_premise_prompt(question, solution_so_far, step, 
