@@ -1,7 +1,5 @@
 import os
 import sys
-project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, project_root)
 
 import json
 import random
@@ -144,20 +142,7 @@ import sys
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
-import json
-import random
-import argparse
-from typing import List, Dict, Any, Union, Optional
-from vllm import LLM, SamplingParams
-from transformers import AutoTokenizer
-import re
-from tqdm import tqdm
-from openai import AzureOpenAI
-from utils_ref import *
-from utils.inference_engine import InferenceEngine, Hyperparameters, get_total_usage
-from dotenv import load_dotenv
 
-load_dotenv()
 
 def process_problems_in_batches(
     problems: List[Dict], 

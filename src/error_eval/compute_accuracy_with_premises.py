@@ -12,8 +12,6 @@ def analyze_step_accuracy(data):
     correct, error, acc = [], [], []
     
     for problem_id,problem in enumerate(data):
-        if problem_id == 13:
-            continue
         total_steps = 0
         correct_steps = 0
         total_error_steps = 0
